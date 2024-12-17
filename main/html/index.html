@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>IoT ADMIN SYSTEM</title>
+<meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="shortcut icon" href="favicon_16.ico" />
+<link rel="bookmark" href="favicon_16.ico" />
+<link rel="stylesheet" href="static/dist/css/site.min.css">
+<link rel="stylesheet" href="static/mdi/css/materialdesignicons.min.css">	
+<link rel="stylesheet" href="static/lib/css/jquery-ui.min.css">
+<link rel="stylesheet" href="static/lib/css/dataTables.bootstrap.min.css">
+<link rel="stylesheet" href="static/lib/css/toastr.css?var={{rand}}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-switch/3.3.4/css/bootstrap3/bootstrap-switch.min.css">
+
+<script type="text/javascript" src="static/dist/js/site.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-switch/3.3.4/js/bootstrap-switch.min.js"></script>
+<script src="static/lib/js/jquery-ui.min.js"></script>
+<script src="static/lib/js/toastr.min.js"></script>
+<script src="static/lib/js/konva.js"></script>
+{% include 'common/css.html' %}
+{% include 'common/css.html' %}
+<style>
+    .chat-box {
+        border: 1px solid #80808069;
+        padding: 10px;
+        max-height: 400px;
+        overflow-y: scroll;
+        margin-bottom: 20px;
+    }
+    .chat-message {
+        padding: 5px;
+        border-radius: 5px;
+        margin: 5px 0;
+        display: inline-block;
+        max-width: 80%;
+        clear: both;
+    }
+    .user-message {
+        background-color: #D1E7DD;
+        float: right;
+        text-align: right;
+    }
+    .bot-message {
+        background-color: #E2E2E2;
+        float: left;
+        text-align: left;
+    }
+</style>
+</head>
+<body>
+    {% include 'top.html' %}
+    <div class="container-fluid">
+        <div class="row row-offcanvas row-offcanvas-left">
+            {% include 'menu.html' %}
+            <div class="col-xs-12 col-sm-9 content">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <h3 class="panel-title">
+                            <a href="javascript:void(0);" class="toggle-sidebar">
+                                <span class="fa fa-angle-double-left" data-toggle="offcanvas" title="Maximize Panel"></span>
+                            </a> Gachon Translator
+                        </h3>
+                    </div>
+                    <div class="panel-body">
+                        <div class="tab-content col-md-12" style="border-top: 1px solid #80808069; padding-top: 10px;">
+                            <div class="content-row">
+                                <div class="chat-box" id="chatBox">
+                                </div>
+                                <table class="table no-border">
+                                    <tr>
+                                        <td colspan="3" style="text-align: center;"><h4>Input Text</h4></td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <div class="form-inline">
+                                                <td><input placeholder="Type your message" class="form-control Input Text areaInput" id="textInput_Chat_GPT" type="text" onkeypress="handleKeyPress(event, 'Chat_GPT')" style="width: 100%; height: 80%;"></td>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="site-footer">
+        <div class="container">
+            <div class="copyright clearfix">
+                <p><b>IOT ADMIN SYSTEM</b>&nbsp;&nbsp;&nbsp;&nbsp;</p>
+                <p>Copyright © ine.gachon.ac.kr 2023</p>
+            </div>
+        </div>
+    </div>
+    <div class="loading-overlay">
+        <img src="static/image/Spinner-1s-200px.gif" alt="Loading" class="loading-image">
+    </div>
+    {% include 'common/js_fun.html' %}
+
+    <script src="static/lib/js/socket.io-3.0.1.min.js"></script>
+    <script>
+        const socket = io({ transports: ['websocket'] });
+
+        socket.on('connect', function() {
+            console.log('소켓 접속 완료');
+        });
+
+        socket.on('disconnect', function() {
+            console.log('소켓 접속 종료');s
+        });
+
+        // 서버로부터 메시지를 수신하여 채팅 박스에 표시
+        socket.on('update_textbox', function(data) {
+            addMessageToChatBox('User', data.message, 'user-message');
+            Chat_GPT_trans(data.message);
+        });
+        socket.on('morse_sequence', function(data) {
+            if (data.sequence) {
+                addMessageToChatBox('Morse', data.sequence, 'bot-message');
+            } else if (data.word) {
+                addMessageToChatBox('Morse', data.word, 'bot-message');
+            } else if (data.sentence) {
+                addMessageToChatBox('Morse', data.sentence, 'bot-message');
+            }
+        });
+        window.onload = function() {
+            addMessageToChatBox('Chat_GPT', 'Welcome', 'bot-message');
+        };
+        async function startMorseTest() {
+            try {
+                console.log("Starting Morse test...");
+                const response = await fetch('/start_morse_test', {
+                    method: 'POST',
+                });
+                if (response.ok) {
+                    console.log('Morse test started');
+                } else {
+                    console.error('Failed to start Morse test');
+                }
+            } catch (error) {
+                console.error('Error occurred while starting Morse test:', error);
+            }
+        }
+    </script>
+    <script>
+        async function Chat_GPT_trans(userInput) {
+            try {
+                console.log('Sending request to the server...');
+                const response = await fetch('/chatgpt', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ userInput: userInput })
+                });
+                const data = await response.json();
+                if (data && data.outputText) {
+                    const modelResponse = data.outputText;
+                    console.log('Model response:', modelResponse);
+                    addMessageToChatBox('Chat_GPT', modelResponse, 'bot-message');
+                } else {
+                    console.error('Invalid response format:', data);
+                    addMessageToChatBox('Chat_GPT', 'Error: Invalid response format from the server.', 'bot-message');
+                }
+            } catch (error) {
+                console.error('Error occurred:', error);
+                addMessageToChatBox('Chat_GPT', 'Error occurred while processing your request.', 'bot-message');
+            }
+        }
+        function addMessageToChatBox(sender, message, className) {
+            const chatBox = document.getElementById('chatBox');
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message', className, 'chat-message');
+            messageElement.innerHTML = `<strong>${sender}:</strong> ${message}`;
+            chatBox.appendChild(messageElement);
+            chatBox.appendChild(document.createElement('br'));
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/raphael/raphael.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/justgage/justgage.js"></script>
+    <script type="text/javascript" src="static/lib/js/jquery.dataTables.min.js"></script>
+    <script type="text/javascript" src="static/lib/js/dataTables.bootstrap.min.js"></script>
+    <script src="static/user/js/system_info.js?var={{rand}}"></script>
+    <script>
+        alertShow('');
+    </script>
+    <script src="static/user/js/3color_led_switch.js?var={{rand}}"></script>
+
+</body>
+</html>
