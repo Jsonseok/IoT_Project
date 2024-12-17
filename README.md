@@ -6,7 +6,7 @@
 - - -
 
 ## Raspberry Pi구성 요소
-
+img/diagram.png
 + ***Push button***
   + Button 1 : Morse 부호에서 점(‘•’)입력을 담당
   + Button 2 : Morse 부호에서 점(‘-’)입력을 담당
