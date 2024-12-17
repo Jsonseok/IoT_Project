@@ -6,4 +6,4 @@
 ## Raspberry Pi구성 요소
 - - -
 + Push button
-
+  + Button 1 : Morse 부호에서 점(‘•’)입력을 담당
